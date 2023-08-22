@@ -1,0 +1,4 @@
+set(PICO_DEV_SOURCE pico-dev)
+add_subdirectory(RP2040_SHT31_hw)
+add_subdirectory(RP2040_MPL3115a2_hw)
+add_subdirectory(RTC-lib)
