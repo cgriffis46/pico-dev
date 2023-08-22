@@ -1,4 +1,5 @@
 #include "include/RTClib.h"
+#include "hardware/i2c.h"
 
 #define PCF8523_ADDRESS 0x68       ///< I2C address for PCF8523
 #define PCF8523_CLKOUTCONTROL 0x0F ///< Timer and CLKOUT control register
@@ -10,6 +11,10 @@
 #define PCF8523_OFFSET 0x0E        ///< Offset register
 #define PCF8523_STATUSREG 0x03     ///< Status register
 
+RTC_PCF8523::RTC_PCF8523(i2c_inst_t *i2c){
+  this->i2c = *i2c;
+}
+
 /**************************************************************************/
 /*!
     @brief  Start I2C for the PCF8523 and test succesful connection
@@ -17,14 +22,14 @@
     @return True if Wire can find PCF8523 or false otherwise.
 */
 /**************************************************************************/
-bool RTC_PCF8523::begin(TwoWire *wireInstance) {
+bool RTC_PCF8523::begin(uint8_t devAddress) {
 //  if (i2c_dev)
 //    delete i2c_dev;
 //  i2c_dev = new Adafruit_I2CDevice(PCF8523_ADDRESS, wireInstance);
 //  if (!i2c_dev->begin())
 //    return false;
 //  return true;
-
+  this->devAddress = devAddress;
   return true;
 }
 
@@ -69,8 +74,8 @@ void RTC_PCF8523::adjust(const DateTime &dt) {
                        bin2bcd(0), // skip weekdays
                        bin2bcd(dt.month()),
                        bin2bcd(dt.year() - 2000U)};
-  i2c_dev->write(buffer, 8);
-
+  // i2c_dev->write(buffer, 8);
+  i2c_write_blocking(&this->i2c,this->devAddress,buffer,8,false);
   // set to battery switchover mode
   write_register(PCF8523_CONTROL_3, 0x00);
 }
@@ -84,7 +89,9 @@ void RTC_PCF8523::adjust(const DateTime &dt) {
 DateTime RTC_PCF8523::now() {
   uint8_t buffer[7];
   buffer[0] = 3;
-  i2c_dev->write_then_read(buffer, 1, buffer, 7);
+  //i2c_dev->write_then_read(buffer, 1, buffer, 7);
+  i2c_write_blocking(&this->i2c,this->devAddress,buffer,1,true);
+  i2c_read_blocking(&this->i2c,this->devAddress,buffer,7,false); 
 
   return DateTime(bcd2bin(buffer[6]) + 2000U, bcd2bin(buffer[5]),
                   bcd2bin(buffer[3]), bcd2bin(buffer[2]), bcd2bin(buffer[1]),
