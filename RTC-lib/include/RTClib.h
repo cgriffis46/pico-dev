@@ -25,8 +25,7 @@
 #include "hardware/i2c.h"
 #include "hardware/gpio.h"
 #include <stdint.h>
-//#include <Adafruit_I2CDevice.h>
-//#include <Arduino.h>
+
 class TimeSpan;
 
 /** Constants */
