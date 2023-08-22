@@ -56,7 +56,7 @@ void RTC_DS3231::adjust(const DateTime &dt) {
                        bin2bcd(dt.year() - 2000U)};
   //i2c_dev->write(buffer, 8);
 
-    i2c_write_blocking(&this->i2c,this->devAddress,buffer,8,true);
+    i2c_write_blocking(&this->i2c,this->devAddress,buffer,8,false);
 
   uint8_t statreg = read_register(DS3231_STATUSREG);
   statreg &= ~0x80; // flip OSF bit

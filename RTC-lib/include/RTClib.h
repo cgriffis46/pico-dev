@@ -447,7 +447,8 @@ public:
 /**************************************************************************/
 class RTC_PCF8563 : RTC_I2C {
 public:
-  bool begin();
+  RTC_PCF8563(i2c_inst_t *i2c);
+  bool begin(uint8_t devAddress);
   bool lostPower(void);
   void adjust(const DateTime &dt);
   DateTime now();
