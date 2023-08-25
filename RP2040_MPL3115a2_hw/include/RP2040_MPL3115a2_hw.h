@@ -7,6 +7,19 @@
 
 #define MPL3115A2_ADDRESS (0x60) ///< default I2C address 1100000
 
+#define MPL3115A2_FIFO_DISABLED _u(0x00)
+#define MPL3115A2_FIFO_STOP_ON_OVERFLOW _u(0x80)
+#define MPL3115A2_FIFO_SIZE 32
+#define MPL3115A2_DATA_BATCH_SIZE 5
+#define MPL3115A2_ALTITUDE_NUM_REGS 3
+#define MPL3115A2_ALTITUDE_INT_SIZE 20
+#define MPL3115A2_TEMPERATURE_INT_SIZE 12
+#define MPL3115A2_NUM_FRAC_BITS 4
+#define MPL3115A2_F_DATA _u(0x01)
+#define MPL3115A2_F_STATUS _u(0x00)
+#define MPL3115A2_F_SETUP _u(0x0F)
+#define MPL3115A2_INT_SOURCE _u(0x12)
+
 enum{
   MPL3115A2_REGISTER_STATUS = (0x00),
 
@@ -101,17 +114,27 @@ public:
     float getPressure(void);
     float getAltitude(void);
     int8_t getAltitudeOffset(void);
-
+    volatile uint8_t fifo_data[MPL3115A2_FIFO_SIZE * MPL3115A2_DATA_BATCH_SIZE];
     void setAltitudeOffset(int8_t offset);
-
+    volatile bool has_new_data;
+    struct mpl3115a2_data_t {
+      // Q8.4 fixed point
+      float temperature;
+      // Q16.4 fixed-point
+      float altitude;
+      float pressure;
+    };
+    mpl3115a2_data_t data;
+    void mpl3115a2_convert_fifo_batch(uint8_t start, volatile uint8_t buf[], struct mpl3115a2_data_t *data);
     float getTemperature(void);
     void setSeaPressure(float SLP);
     void setMode(mpl3115a2_mode_t mode = MPL3115A2_BAROMETER);
     void startOneShot(void);
     bool conversionComplete(void);
     float getLastConversionResults(mpl3115a2_meas_t value = MPL3115A2_PRESSURE);
-
+    void mpl3115a2_read_fifo(volatile uint8_t fifo_buf[]);
     void write8(uint8_t a, uint8_t d);
+    uint8_t mpl3115a2_read_reg(uint8_t reg);
 private:
   uint8_t read8(uint8_t a);
   mpl3115a2_mode_t currentMode;

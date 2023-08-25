@@ -3,6 +3,14 @@
 #include "hardware/i2c.h"
 #include "hardware/gpio.h"
 
+volatile bool has_new_data = false;
+
+void copy_to_vbuf(uint8_t buf1[], volatile uint8_t buf2[], int buflen) {
+    for (size_t i = 0; i < buflen; i++) {
+        buf2[i] = buf1[i];
+    }
+}
+
 RP2040_MPL3115a2_hw::RP2040_MPL3115a2_hw(i2c_inst_t *i2c){
     this->i2c = *i2c;
 }
@@ -28,8 +36,8 @@ bool RP2040_MPL3115a2_hw::begin(uint8_t devAddress){
         i2c_read_blocking(&this->i2c,this->devAddress,&resetReg,1,false);
     }
     // set oversampling and altitude mode
-    currentMode = MPL3115A2_ALTIMETER;
-    _ctrl_reg1.reg = MPL3115A2_CTRL_REG1_OS128 | MPL3115A2_CTRL_REG1_ALT;
+    currentMode = MPL3115A2_BAROMETER;
+    _ctrl_reg1.reg = MPL3115A2_CTRL_REG1_OS128 | MPL3115A2_CTRL_REG1_BAR;
     cmd[0] = MPL3115A2_CTRL_REG1;
     cmd[1] = _ctrl_reg1.reg;
     i2c_write_blocking(&this->i2c,this->devAddress,cmd,2,false);
@@ -39,6 +47,27 @@ bool RP2040_MPL3115a2_hw::begin(uint8_t devAddress){
     i2c_write_blocking(&this->i2c,this->devAddress,cmd,2,false);
     sleep_ms(10);
 
+    //setMode(MPL3115A2_BAROMETER);
+
+    // set data refresh every 2 seconds, 0 next bits as we're not using those interrupts
+    cmd[0] = MPL3115A2_CTRL_REG2, cmd[1] = 0x00;
+    i2c_write_blocking(&this->i2c, this->devAddress, cmd, 2, false);
+
+    // set both interrupts pins to active low and enable internal pullups
+    cmd[0] = MPL3115A2_CTRL_REG3, cmd[1] = 0x01;
+    i2c_write_blocking(&this->i2c, this->devAddress, cmd, 2, false);
+
+    // enable interrupt
+    cmd[0] = MPL3115A2_CTRL_REG4, cmd[1] = 0x80;
+    i2c_write_blocking(&this->i2c, this->devAddress, cmd, 2, false);
+
+    // tie Data Ready interrupt to pin INT1
+    cmd[0] = MPL3115A2_CTRL_REG5, cmd[1] = 0x80;
+    i2c_write_blocking(&this->i2c, this->devAddress, cmd, 2, false);
+
+    //set device active
+    cmd[0] =   MPL3115A2_CTRL_REG1; cmd[1] = 0xB9;
+    i2c_write_blocking(&this->i2c, this->devAddress, cmd, 2, false);
     return true;
 }
 
@@ -115,7 +144,7 @@ void RP2040_MPL3115a2_hw::startOneShot(void){
     i2c_write_blocking(&this->i2c,this->devAddress,cmd,1,true);
     i2c_read_blocking(&this->i2c,this->devAddress,&reg,1,false);
     _ctrl_reg1.reg = reg;
-
+    // poll the device until data is ready
     while (_ctrl_reg1.bit.OST) {
         i2c_write_blocking(&this->i2c,this->devAddress,cmd,1,true);
         i2c_read_blocking(&this->i2c,this->devAddress,&reg,1,false);
@@ -162,3 +191,40 @@ float RP2040_MPL3115a2_hw::getLastConversionResults(mpl3115a2_meas_t value){
         return float(t) / 256.0;
   }
 }
+
+void RP2040_MPL3115a2_hw::mpl3115a2_convert_fifo_batch(uint8_t start, volatile uint8_t buf[], struct mpl3115a2_data_t *data) {
+    // convert a batch of fifo data into temperature and altitude data
+
+    if(currentMode == MPL3115A2_BAROMETER) { int32_t p = uint32_t(buf[0]) << 16 | uint32_t(buf[1]) << 8 | uint32_t(buf[2]);}
+    else if (currentMode == MPL3115A2_ALTIMETER){
+    // 3 altitude registers: MSB (8 bits), CSB (8 bits) and LSB (4 bits, starting from MSB)
+    // first two are integer bits (2's complement) and LSB is fractional bits -> makes 20 bit signed integer
+    int32_t h = (int32_t) buf[start] << 24;
+    h |= (int32_t) buf[start + 1] << 16;
+    h |= (int32_t) buf[start + 2] << 8;
+    data->altitude = ((float)h) / 65536.f;}
+
+    // 2 temperature registers: MSB (8 bits) and LSB (4 bits, starting from MSB)
+    // first 8 are integer bits with sign and LSB is fractional bits -> 12 bit signed integer
+    int16_t t = (int16_t) buf[start + 3] << 8;
+    t |= (int16_t) buf[start + 4];
+    data->temperature = ((float)t) / 256.f;
+}
+
+void RP2040_MPL3115a2_hw::mpl3115a2_read_fifo(volatile uint8_t fifo_buf[]) {
+    // drains the 160 byte FIFO
+    uint8_t reg = MPL3115A2_F_DATA;
+    uint8_t buf[MPL3115A2_FIFO_SIZE * MPL3115A2_DATA_BATCH_SIZE];
+    i2c_write_blocking(&this->i2c, this->devAddress, &reg, 1, true);
+    // burst read 160 bytes from fifo
+    i2c_read_blocking(&this->i2c, this->devAddress, buf, MPL3115A2_FIFO_SIZE * MPL3115A2_DATA_BATCH_SIZE, false);
+    copy_to_vbuf(buf, fifo_buf, MPL3115A2_FIFO_SIZE * MPL3115A2_DATA_BATCH_SIZE);
+}
+
+uint8_t RP2040_MPL3115a2_hw::mpl3115a2_read_reg(uint8_t reg) {
+    uint8_t read;
+    i2c_write_blocking(&this->i2c, this->devAddress, &reg, 1, true); // keep control of bus
+    i2c_read_blocking(&this->i2c, this->devAddress, &read, 1, false);
+    return read;
+}
+

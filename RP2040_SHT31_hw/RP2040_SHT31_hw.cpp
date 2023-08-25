@@ -54,7 +54,7 @@ bool RP2040_SHT31_hw::readTempHum(float* t, float* h){
   uint8_t cmd[2];
 
   cmd[0] = SHT31_MEAS_HIGHREP_MSB;
-  cmd[1] = SHT31_MEAS_HIGHREP_LSB; 
+  cmd[1] = SHT31_MEAS_HIGHREP_LSB;
   
   i2c_write_blocking(i2c1, SHT31_DEFAULT_ADDR, cmd, 2, false);
   sleep_ms(20);
@@ -144,3 +144,39 @@ bool RP2040_SHT31_hw::isHeaterEnabled() {
   return regValue&SHT31_REG_HEATER_BIT>0;
 }
 
+void RP2040_SHT31_hw::PeriodicMode(){
+  uint8_t cmd[2];
+  cmd[0] = SHT31_PERIODIC_05mps_HIGHREP_MSB;
+  cmd[1] = SHT31_PERIODIC_05mps_HIGHREP_LSB;
+  i2c_write_blocking(&this->i2c, SHT31_DEFAULT_ADDR, cmd, 2, false);
+}
+
+bool RP2040_SHT31_hw::callback(float *t, float *h){
+  uint8_t cmd[2];
+  uint8_t readbuffer[6];
+
+  cmd[0] = SHT31_FETCH_DATA_MSB;
+  cmd[1] = SHT31_FETCH_DATA_LSB; 
+  
+  i2c_write_blocking(&this->i2c, SHT31_DEFAULT_ADDR, cmd, 2, false);
+  i2c_read_blocking(&this->i2c,SHT31_DEFAULT_ADDR,readbuffer, 6,false);
+
+     if (readbuffer[2] != this->crc8(readbuffer, 2) ||
+      readbuffer[5] != this->crc8(readbuffer + 3, 2))
+    return false;
+
+  int32_t stemp = (int32_t)(((uint32_t)readbuffer[0] << 8) + readbuffer[1]);
+  // simplified (65536 instead of 65535) integer version of:
+  // temp = (stemp * 175.0f) / 65535.0f - 45.0f;
+  stemp = ((4375 * stemp) >> 14) - 4500;
+  this->temp = (float)stemp / 100.0f;
+  *t = temp;
+  uint32_t shum = ((uint32_t)readbuffer[3] << 8) + readbuffer[4];
+  // simplified (65536 instead of 65535) integer version of:
+  // humidity = (shum * 100.0f) / 65535.0f;
+  shum = (625 * shum) >> 12;
+  this->humidity = (float)shum / 100.0f;
+  *h = this->humidity;
+
+  return true;
+}

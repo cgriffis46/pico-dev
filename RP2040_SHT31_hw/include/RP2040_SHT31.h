@@ -32,6 +32,54 @@
 #define SHT31_SOFTRESET_MSB 0x30
 #define SHT31_SOFTRESET_LSB 0xA2
 
+#define SHT31_FETCH_DATA_MSB 0xE0
+#define SHT31_FETCH_DATA_LSB 0x00
+
+#define SHT31_PERIODIC_05mps_HIGHREP_MSB 0x20
+#define SHT31_PERIODIC_05mps_HIGHREP_LSB 0x32
+
+#define SHT31_PERIODIC_05mps_MEDREP_MSB 0x20
+#define SHT31_PERIODIC_05mps_MEDREP_LSB 0x24
+
+#define SHT31_PERIODIC_05mps_LOWREP_MSB 0x20
+#define SHT31_PERIODIC_05mps_LOWREP_LSB 0x2F
+
+#define SHT31_PERIODIC_1mps_HIGHREP_MSB 0x21
+#define SHT31_PERIODIC_1mps_HIGHREP_LSB 0x30
+
+#define SHT31_PERIODIC_1mps_MEDREP_MSB 0x21
+#define SHT31_PERIODIC_1mps_MEDREP_LSB 0x26
+
+#define SHT31_PERIODIC_1mps_LOWREP_MSB 0x21
+#define SHT31_PERIODIC_1mps_LOWREP_LSB 0x2D
+
+#define SHT31_PERIODIC_2mps_HIGHREP_MSB 0x22
+#define SHT31_PERIODIC_2mps_HIGHREP_LSB 0x36
+
+#define SHT31_PERIODIC_2mps_MEDREP_MSB 0x22
+#define SHT31_PERIODIC_2mps_MEDREP_LSB 0x20
+
+#define SHT31_PERIODIC_2mps_LOWREP_MSB 0x22
+#define SHT31_PERIODIC_2mps_LOWREP_LSB 0x2B
+
+#define SHT31_PERIODIC_4mps_HIGHREP_MSB 0x23
+#define SHT31_PERIODIC_4mps_HIGHREP_LSB 0x34
+
+#define SHT31_PERIODIC_4mps_MEDREP_MSB 0x23
+#define SHT31_PERIODIC_4mps_MEDREP_LSB 0x22
+
+#define SHT31_PERIODIC_4mps_LOWREP_MSB 0x23
+#define SHT31_PERIODIC_4mps_LOWREP_LSB 0x29
+
+#define SHT31_PERIODIC_10mps_HIGHREP_MSB 0x27
+#define SHT31_PERIODIC_10mps_HIGHREP_LSB 0x37
+
+#define SHT31_PERIODIC_10mps_MEDREP_MSB 0x27
+#define SHT31_PERIODIC_10mps_MEDREP_LSB 0x21
+
+#define SHT31_PERIODIC_10mps_LOWREP_MSB 0x27
+#define SHT31_PERIODIC_10mps_LOWREP_LSB 0x2A
+
 class RP2040_SHT31_hw {
 public:
     RP2040_SHT31_hw(i2c_inst_t *i2c);
@@ -41,6 +89,8 @@ public:
     void reset();
     uint16_t readStatus(void);
     bool isHeaterEnabled();
+    void PeriodicMode();
+    bool callback(float *t, float *h);
 private:
     float temp = 0;
     float humidity = 0;
