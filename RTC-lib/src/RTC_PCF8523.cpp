@@ -22,14 +22,14 @@ RTC_PCF8523::RTC_PCF8523(i2c_inst_t *i2c){
     @return True if Wire can find PCF8523 or false otherwise.
 */
 /**************************************************************************/
-bool RTC_PCF8523::begin(uint8_t devAddress) {
+bool RTC_PCF8523::begin(uint8_t  WriteAdress, uint8_t ReadAddress) {
 //  if (i2c_dev)
 //    delete i2c_dev;
 //  i2c_dev = new Adafruit_I2CDevice(PCF8523_ADDRESS, wireInstance);
 //  if (!i2c_dev->begin())
 //    return false;
 //  return true;
-  this->devAddress = devAddress;
+  this->ReadAddress = ReadAddress; this->WriteAdress = WriteAdress;
   return true;
 }
 
@@ -75,7 +75,7 @@ void RTC_PCF8523::adjust(const DateTime &dt) {
                        bin2bcd(dt.month()),
                        bin2bcd(dt.year() - 2000U)};
   // i2c_dev->write(buffer, 8);
-  i2c_write_blocking(&this->i2c,this->devAddress,buffer,8,false);
+  i2c_write_blocking(&this->i2c,this->WriteAdress,buffer,8,false);
   // set to battery switchover mode
   write_register(PCF8523_CONTROL_3, 0x00);
 }
@@ -90,8 +90,8 @@ DateTime RTC_PCF8523::now() {
   uint8_t buffer[7];
   buffer[0] = 3;
   //i2c_dev->write_then_read(buffer, 1, buffer, 7);
-  i2c_write_blocking(&this->i2c,this->devAddress,buffer,1,true);
-  i2c_read_blocking(&this->i2c,this->devAddress,buffer,7,false); 
+  i2c_write_blocking(&this->i2c,this->ReadAddress,buffer,1,true);
+  i2c_read_blocking(&this->i2c,this->ReadAddress,buffer,7,false); 
 
   return DateTime(bcd2bin(buffer[6]) + 2000U, bcd2bin(buffer[5]),
                   bcd2bin(buffer[3]), bcd2bin(buffer[2]), bcd2bin(buffer[1]),
@@ -298,4 +298,33 @@ void RTC_PCF8523::deconfigureAllTimers() {
 /**************************************************************************/
 void RTC_PCF8523::calibrate(Pcf8523OffsetMode mode, int8_t offset) {
   write_register(PCF8523_OFFSET, ((uint8_t)offset & 0x7F) | mode);
+}
+
+/**************************************************************************/
+/*!
+    @brief Write value to register.
+    @param reg register address
+    @param val value to write
+*/
+/**************************************************************************/
+void RTC_PCF8523::write_register(uint8_t reg, uint8_t val) {
+  uint8_t buffer[2] = {reg, val};
+  //i2c_dev->write(buffer, 2);
+    i2c_write_blocking(&this->i2c,this->WriteAdress,buffer,2,true);
+}
+
+/**************************************************************************/
+/*!
+    @brief Read value from register.
+    @param reg register address
+    @return value of register
+*/
+/**************************************************************************/
+uint8_t RTC_PCF8523::read_register(uint8_t reg) {
+  uint8_t buffer[1];
+  //i2c_dev->write(&reg, 1);
+  //i2c_dev->read(buffer, 1);
+    i2c_write_blocking(&this->i2c,this->ReadAddress,buffer,1,true);
+    i2c_read_blocking(&this->i2c,this->ReadAddress,buffer,1,false); 
+  return buffer[0];
 }

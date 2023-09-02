@@ -210,10 +210,12 @@ public:
   };
 
   typedef struct {
-    char TimeStampString[25] = "0000-00-00 00:00:00";
+    char TimeStampString[20] = "0000-00-00 00:00:00";
   } TimeStampString;
 
-  void timestamp(timestampOpt opt = TIMESTAMP_FULL, TimeStampString ts = {"00-00-00 00:00:00"}) const;
+  //const TimeStampString timestamp = {"0000-00-00 00:00:00"};
+
+  void timestamp(timestampOpt opt, TimeStampString* t) const;
 
   DateTime operator+(const TimeSpan &span) const;
   DateTime operator-(const TimeSpan &span) const;
@@ -419,7 +421,7 @@ public:
 class RTC_PCF8523 : RTC_I2C {
 public:
   RTC_PCF8523(i2c_inst_t *i2c);
-  bool begin(uint8_t devAddress);
+  bool begin(uint8_t  WriteAdress, uint8_t ReadAddress);
   void adjust(const DateTime &dt);
   bool lostPower(void);
   bool initialized(void);
@@ -437,6 +439,10 @@ public:
   void disableCountdownTimer(void);
   void deconfigureAllTimers(void);
   void calibrate(Pcf8523OffsetMode mode, int8_t offset);
+private:
+  uint8_t WriteAdress,ReadAddress;
+  uint8_t read_register(uint8_t reg);
+  void write_register(uint8_t reg, uint8_t val);
 };
 
 /**************************************************************************/
@@ -447,7 +453,7 @@ public:
 class RTC_PCF8563 : RTC_I2C {
 public:
   RTC_PCF8563(i2c_inst_t *i2c);
-  bool begin(uint8_t devAddress);
+  bool begin(uint8_t  WriteAdress, uint8_t ReadAddress);
   bool lostPower(void);
   void adjust(const DateTime &dt);
   DateTime now();
@@ -456,6 +462,11 @@ public:
   uint8_t isrunning();
   Pcf8563SqwPinMode readSqwPinMode();
   void writeSqwPinMode(Pcf8563SqwPinMode mode);
+private:
+  uint8_t WriteAdress,ReadAddress;
+  uint8_t read_register(uint8_t reg);
+  void write_register(uint8_t reg, uint8_t val);
+  
 };
 
 /**************************************************************************/

@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define PCF8563_ADDRESS 0xA3       ///< I2C address for PCF8563
+#define PCF8563_READ_ADDRESS 0xA3       ///< I2C address for PCF8563
+#define PCF8563_WRITE_ADDRESS 0xA2 
 #define PCF8563_CLKOUTCONTROL 0x0D ///< CLKOUT control register
 #define PCF8563_CONTROL_1 0x00     ///< Control and status register 1
 #define PCF8563_CONTROL_2 0x01     ///< Control and status register 2
@@ -21,13 +22,13 @@ RTC_PCF8563::RTC_PCF8563(i2c_inst_t *i2c){
     @return True if Wire can find PCF8563 or false otherwise.
 */
 /**************************************************************************/
-bool RTC_PCF8563::begin(uint8_t devAddress) {
+bool RTC_PCF8563::begin(uint8_t WriteAdress = 0xA2, uint8_t ReadAddress = 0xA3) {
 //  if (i2c_dev)
 //    delete i2c_dev;
 //  i2c_dev = new Adafruit_I2CDevice(PCF8563_ADDRESS, wireInstance);
 //  if (!i2c_dev->begin())
 //    return false;
-  this->devAddress = devAddress;
+  this->WriteAdress = WriteAdress;this->ReadAddress = ReadAddress;
   return true;
 }
 
@@ -60,7 +61,7 @@ void RTC_PCF8563::adjust(const DateTime &dt) {
                        bin2bcd(dt.month()),  bin2bcd(dt.year() - 2000U)};
   //i2c_dev->write(buffer, 8);
 
-    i2c_write_blocking(&this->i2c,this->devAddress,buffer,8,false);
+    i2c_write_blocking(&this->i2c,this->WriteAdress,buffer,8,false);
 
 }
 
@@ -75,8 +76,8 @@ DateTime RTC_PCF8563::now() {
   buffer[0] = PCF8563_VL_SECONDS; // start at location 2, VL_SECONDS
   //i2c_dev->write_then_read(buffer, 1, buffer, 7);
 
-    i2c_write_blocking(&this->i2c,this->devAddress,buffer,1,true);
-    i2c_read_blocking(&this->i2c,this->devAddress,buffer,7,false);
+    i2c_write_blocking(&this->i2c,this->ReadAddress,buffer,1,true);
+    i2c_read_blocking(&this->i2c,this->ReadAddress,buffer,7,false);
 
   return DateTime(bcd2bin(buffer[6]) + 2000U, bcd2bin(buffer[5] & 0x1F),
                   bcd2bin(buffer[3] & 0x3F), bcd2bin(buffer[2] & 0x3F),
@@ -136,3 +137,31 @@ void RTC_PCF8563::writeSqwPinMode(Pcf8563SqwPinMode mode) {
   write_register(PCF8563_CLKOUTCONTROL, mode);
 }
 
+/**************************************************************************/
+/*!
+    @brief Write value to register.
+    @param reg register address
+    @param val value to write
+*/
+/**************************************************************************/
+void RTC_PCF8563::write_register(uint8_t reg, uint8_t val) {
+  uint8_t buffer[2] = {reg, val};
+  //i2c_dev->write(buffer, 2);
+    i2c_write_blocking(&this->i2c,this->WriteAdress,buffer,2,true);
+}
+
+/**************************************************************************/
+/*!
+    @brief Read value from register.
+    @param reg register address
+    @return value of register
+*/
+/**************************************************************************/
+uint8_t RTC_PCF8563::read_register(uint8_t reg) {
+  uint8_t buffer[1];
+  //i2c_dev->write(&reg, 1);
+  //i2c_dev->read(buffer, 1);
+    i2c_write_blocking(&this->i2c,this->ReadAddress,buffer,1,true);
+    i2c_read_blocking(&this->i2c,this->ReadAddress,buffer,1,false); 
+  return buffer[0];
+}

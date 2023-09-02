@@ -702,25 +702,25 @@ bool DateTime::operator==(const DateTime &right) const {
     @return Timestamp string, e.g. "2020-04-16T18:34:56".
 */
 /**************************************************************************/
-void DateTime::timestamp(timestampOpt opt, TimeStampString ts) const {
+void DateTime::timestamp(timestampOpt opt, TimeStampString* t) const {
   //char t[25]; // large enough for any DateTime, including invalid ones
 
   // Generate timestamp according to opt
   switch (opt) {
   case TIMESTAMP_TIME:
     // Only time
-    sprintf(ts.TimeStampString, "%02d:%02d:%02d", hh, mm, ss);
+    sprintf(t->TimeStampString, "%02d:%02d:%02d", hh, mm, ss);
     break;
   case TIMESTAMP_DATE:
     // Only date
-    sprintf(ts.TimeStampString, "%u-%02d-%02d", 2000U + yOff, m, d);
+    sprintf(t->TimeStampString, "%u-%02d-%02d", 2000U + yOff, m, d);
     break;
   default:
     // Full
-    sprintf(ts.TimeStampString, "%u-%02d-%02dT%02d:%02d:%02d", 2000U + yOff, m, d, hh, mm,
+    sprintf(t->TimeStampString, "%u-%02d-%02dT%02d:%02d:%02d", 2000U + yOff, m, d, hh, mm,
             ss);
   }
-  //return String(buffer);
+ // return &t;
 }
 
 /**************************************************************************/
