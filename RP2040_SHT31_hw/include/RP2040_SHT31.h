@@ -24,7 +24,8 @@
 #define SHT31_READSTATUS 0xF32D   /**< Read Out of Status Register */
 #define SHT31_READSTATUS_MSB 0xF3   /**< Read Out of Status Register */
 #define SHT31_READSTATUS_LSB 0x2D   /**< Read Out of Status Register */
-#define SHT31_CLEARSTATUS 0x3041  /**< Clear Status */
+#define SHT31_CLEARSTATUS_MSB 0x30  /**< Clear Status */
+#define SHT31_CLEARSTATUS_LSB 0x41  /**< Clear Status */
 #define SHT31_SOFTRESET 0x30A2    /**< Soft Reset */
 #define SHT31_HEATEREN 0x306D     /**< Heater Enable */
 #define SHT31_HEATERDIS 0x3066    /**< Heater Disable */
@@ -80,6 +81,34 @@
 #define SHT31_PERIODIC_10mps_LOWREP_MSB 0x27
 #define SHT31_PERIODIC_10mps_LOWREP_LSB 0x2A
 
+struct SHT31_Alert_t{
+  float SetTemp, ClearTemp;
+  float SetHumidity, ClearHumidity;
+};
+
+typedef enum {
+  C = 0,
+  F = 1
+}temp_unit;
+
+typedef enum{
+  _05mps_high_Res = 0,
+  _05_med_Res = 1,
+  _05_low_Res = 2,
+  _1mps_high_Res = 3,
+  _1mps_med_Res = 4,
+  _1mps_low_Res = 5,
+  _2mps_high_Res = 6,
+  _2mps_med_Res = 7,
+  _2mps_low_Res = 8,
+  _4mps_high_Res = 9,
+  _4mps_med_Res = 10,
+  _4mps_low_Res = 11,
+  _10mps_high_Res = 12,
+  _10mps_med_Res = 13,
+  _10mps_low_Res = 14,
+}SHT31_Sample_Rate_t;
+
 class RP2040_SHT31_hw {
 public:
     RP2040_SHT31_hw(i2c_inst_t *i2c);
@@ -89,13 +118,21 @@ public:
     void reset();
     uint16_t readStatus(void);
     bool isHeaterEnabled();
-    void PeriodicMode();
-    bool callback(float *t, float *h);
+    void PeriodicMode(SHT31_Sample_Rate_t mps);
+    bool FetchData(float *t, float *h);
+    void setHighAlert(SHT31_Alert_t* alert);
+    void setLowAlert(SHT31_Alert_t* alert);
+    void ReadLowAlert(SHT31_Alert_t* alert);
+    void ReadHighAlert(SHT31_Alert_t* alert);
+    void clearStatus();
 private:
     float temp = 0;
     float humidity = 0;
     bool writeCommand(uint16_t command);
     static uint8_t crc8(const uint8_t *data, int len);
+    temp_unit unit = C;
+    SHT31_Alert_t HighAlert;
+    SHT31_Alert_t LowAlert;
 protected:
     i2c_inst_t i2c;
     uint8_t devAddress = SHT31_DEFAULT_ADDR;
