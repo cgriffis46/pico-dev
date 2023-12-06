@@ -74,7 +74,7 @@
 void RTC_I2C::write_register(uint8_t reg, uint8_t val) {
   uint8_t buffer[2] = {reg, val};
   //i2c_dev->write(buffer, 2);
-    i2c_write_blocking(&this->i2c,this->devAddress,buffer,2,true);
+    i2c_write_blocking(&this->i2c,this->devAddress,buffer,2,false);
 }
 
 /**************************************************************************/
